@@ -270,6 +270,7 @@ public:
 
     // 异步查找流
     static void findAsync(const MediaInfo &info, const std::shared_ptr<TcpSession> &session, const function<void(const Ptr &src)> &cb);
+    static void findAsync(const MediaInfo &info, const std::shared_ptr<Socket> &socket, const function<void(const Ptr &src)> &cb);
     // 遍历所有流
     static void for_each_media(const function<void(const Ptr &src)> &cb);
     // 从mp4文件生成MediaSource

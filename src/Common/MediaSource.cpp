@@ -299,7 +299,24 @@ static MediaSource::Ptr find_l(const string &schema, const string &vhost_in, con
     return ret;
 }
 
-static void findAsync_l(const MediaInfo &info, const std::shared_ptr<TcpSession> &session, bool retry,
+// T 需要实现 getPoller 以及 继承 SockInfo
+template <typename T>
+struct SocketContainer {};
+
+template <>
+struct SocketContainer<Socket> {
+    using Ptr = std::shared_ptr<Socket>;
+    using WeakPtr = std::weak_ptr<Socket>;
+};
+
+template<>
+struct SocketContainer<TcpSession> {
+    using Ptr = std::shared_ptr<TcpSession>;
+    using WeakPtr = std::weak_ptr<TcpSession>;
+};
+
+template <typename T, typename = typename std::enable_if<std::is_base_of<SockInfo, T>::value, T>::type>
+static void findAsync_l(const MediaInfo &info, const typename SocketContainer<T>::Ptr &socket, bool retry,
                         const function<void(const MediaSource::Ptr &src)> &cb){
     auto src = find_l(info._schema, info._vhost, info._app, info._streamid, true);
     if (src || !retry) {
@@ -308,8 +325,8 @@ static void findAsync_l(const MediaInfo &info, const std::shared_ptr<TcpSession>
     }
 
     GET_CONFIG(int, maxWaitMS, General::kMaxStreamWaitTimeMS);
-    void *listener_tag = session.get();
-    auto poller = session->getPoller();
+    void *listener_tag = socket.get();
+    auto poller = socket->getPoller();
     std::shared_ptr<atomic_flag> invoked(new atomic_flag{false});
     auto cb_once = [cb, invoked](const MediaSource::Ptr &src) {
         if (invoked->test_and_set()) {
@@ -333,8 +350,8 @@ static void findAsync_l(const MediaInfo &info, const std::shared_ptr<TcpSession>
         NoticeCenter::Instance().delListener(listener_tag, Broadcast::kBroadcastMediaChanged);
     };
 
-    weak_ptr<TcpSession> weak_session = session;
-    auto on_register = [weak_session, info, cb_once, cancel_all, poller](BroadcastMediaChangedArgs) {
+    typename SocketContainer<T>::WeakPtr weak_socket = socket;
+    auto on_register = [weak_socket, info, cb_once, cancel_all, poller](BroadcastMediaChangedArgs) {
         if (!bRegist ||
             sender.getSchema() != info._schema ||
             sender.getVhost() != info._vhost ||
@@ -343,17 +360,17 @@ static void findAsync_l(const MediaInfo &info, const std::shared_ptr<TcpSession>
             //不是自己感兴趣的事件，忽略之
             return;
         }
-        poller->async([weak_session, cancel_all, info, cb_once]() {
+        poller->async([weak_socket, cancel_all, info, cb_once]() {
             cancel_all();
-            auto strong_session = weak_session.lock();
-            if (!strong_session) {
+            auto strong_socket = weak_socket.lock();
+            if (!strong_socket) {
                 //自己已经销毁
                 return;
             }
             //播发器请求的流终于注册上了，切换到自己的线程再回复
             DebugL << "收到媒体注册事件,回复播放器:" << info._schema << "/" << info._vhost << "/" << info._app << "/" << info._streamid;
             //再找一遍媒体源，一般能找到
-            findAsync_l(info, strong_session, false, cb_once);
+            findAsync_l<T>(info, strong_socket, false, cb_once);
         }, false);
     };
 
@@ -368,11 +385,16 @@ static void findAsync_l(const MediaInfo &info, const std::shared_ptr<TcpSession>
         });
     };
     //广播未找到流,此时可以立即去拉流，这样还来得及
-    NoticeCenter::Instance().emitEvent(Broadcast::kBroadcastNotFoundStream, info, static_cast<SockInfo &>(*session), close_player);
+    NoticeCenter::Instance().emitEvent(Broadcast::kBroadcastNotFoundStream, info, static_cast<SockInfo &>(*socket), close_player);
 }
 
 void MediaSource::findAsync(const MediaInfo &info, const std::shared_ptr<TcpSession> &session,const function<void(const Ptr &src)> &cb){
-    return findAsync_l(info, session, true, cb);
+    return findAsync_l<TcpSession>(info, session, true, cb);
+}
+
+void MediaSource::findAsync(const MediaInfo &info, const std::shared_ptr<Socket> &socket, const function<void (const MediaSource::Ptr &)> &cb)
+{
+    return findAsync_l<Socket>(info, socket, true, cb);
 }
 
 MediaSource::Ptr MediaSource::find(const string &schema, const string &vhost, const string &app, const string &id) {
