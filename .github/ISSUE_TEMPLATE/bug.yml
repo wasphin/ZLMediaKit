@@ -1,0 +1,78 @@
+name: bug 反馈
+description: 反馈 ZLMediaKit 代码本身的 bug
+labels:
+  - 'bug'
+
+body:
+  - type: markdown
+    attributes:
+      value: |-
+        ## bug 反馈填写注意事项
+
+        请仔细阅读相关填写说明, 请务必根据提示提供相关信息, 提供的信息越充分越有利于快速解决问题.
+
+  - type: textarea
+    attributes:
+      label: 现象描述
+      description: 在使用什么功能产生的问题? 其异常表现是什么?
+      placeholder: 如：在测试 WebRTC 功能时, 使用 Chrome 浏览器访问 ZLMediaKit 自带网页播放 FFmpeg 以 RTSP 协议推送的图像有卡顿/花屏.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 复现步骤
+      description: 明确复现步骤有助于快速解决问题.
+      placeholder: |-
+        1. 首先 ...
+        2. 然后 ...
+        3. 期望 ..., 结果 ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 异常调用栈
+      description: |-
+        如服务异常 crash 退出, 请粘贴相关调用栈, 这对解决该类问题非常有帮助.
+      render: text
+
+  - type: textarea
+    attributes:
+      label: 相关日志
+      description: |-
+        关键日志对解决问题也非常有帮助, 请粘贴尽量详细的服务日志.
+    render: text
+
+  - type: textarea
+    attributes:
+      label: 相关截图
+      description: |-
+        问题现象的截图有助于快速定位问题.
+
+  - type: textarea
+    attributes:
+      label: 配置
+      description: |-
+        部分常见问题是由于配置错误导致的, 建议仔细阅读配置文件中的注释信息.
+      render: text
+
+  - type: textarea
+    attributes:
+      label: 各种环境信息
+      description: |-
+        请填写相关环境信息, 详细的环境信息有助于快速复现定位问题.
+
+        * 代码提交记录, 可使用命令 `git rev-parse HEAD` 进行查看.
+        * 操作系统及版本, 如: Windows 10, CentOS 7, ...
+        * 硬件信息, 如: Intel, AMD, ARM, 飞腾, 龙芯, ...
+      value: |-
+        * **代码提交记录/git commit hash**:
+        * **操作系统及版本**:
+        * **硬件信息**:
+
+  - type: textarea
+    attributes:
+      label: 其他补充信息
+      description: |-
+        如果有其他需要补充的, 请在此处补充.
